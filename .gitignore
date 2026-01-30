@@ -1,24 +1,16 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Secrets (Keys stay on your laptop)
+.env
+backend/.env
+frontend/.env
+*.env
 
-node_modules
-dist
-dist-ssr
-*.local
+# Python junk
+__pycache__/
+*.py[cod]
+venv/
+.venv/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Node/JS junk
+node_modules/
+dist/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
