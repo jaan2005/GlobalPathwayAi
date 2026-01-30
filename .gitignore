@@ -1,4 +1,4 @@
-# Secrets (Keys stay on your laptop)
+# Secrets 
 .env
 backend/.env
 frontend/.env
