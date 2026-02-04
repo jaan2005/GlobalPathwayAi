@@ -170,7 +170,7 @@ export default function App() {
                   <div className="space-y-3 pt-8">
                     <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">Major / Field of Interest</label>
                     <select className={`serif-input ${isDark ? 'text-white' : ''}`} value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})}>
-                      <option value="" className="text-black">Select your field</option>
+                      <option value="" className="text-black" disabled>Select your field</option>
                       <option value="Computer Science / IT" className="text-black">Computer Science / IT</option>
                       <option value="Data Science & AI" className="text-black">Data Science & AI</option>
                       <option value="Business / MBA" className="text-black">Business / MBA</option>

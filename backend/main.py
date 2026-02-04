@@ -58,10 +58,10 @@ async def recommend_pathway(user: UserRequest):
 
     # 4. Run AI Advisor for top result (if available)
     ai_note = empathy_note
-    all_results = (strategies['safe_bets'] + strategies['fast_track'] + strategies['moonshots'])
+    discovered_countries = (strategies['safe_bets'] + strategies['fast_track'] + strategies['moonshots'])
     
-    if all_results and AI_ADVISOR_AVAILABLE:
-        top_country = sorted(all_results, key=lambda x: -x['match_score'])[0]
+    if discovered_countries and AI_ADVISOR_AVAILABLE:
+        top_country = sorted(discovered_countries, key=lambda x: -x['match_score'])[0]
         # Get country data for AI advisor
         country_db_data = None
         for c in core_engine.COUNTRY_DB:
