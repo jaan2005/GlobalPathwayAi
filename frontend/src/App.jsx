@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Globe, Sun, Moon, UserCircle, Lightbulb, 
-  ArrowRight, Loader2,
-  BookOpen, GraduationCap, Pencil, Coffee, Home, LayoutDashboard, Info, AlertCircle,
-  BrainCircuit, TrendingUp, Coins, Landmark, CheckCircle2, Smile
+  Globe, Sun, Moon, ArrowRight, Loader2,
+  BookOpen, GraduationCap,
+  BrainCircuit, TrendingUp, Coins, Landmark, CheckCircle2, Smile,
+  Shield, Zap, AlertTriangle
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -11,9 +11,8 @@ export default function App() {
   const [isDark, setIsDark] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [showModal, setShowModal] = useState(false); 
   
-  const [apiResult, setApiResult] = useState(null);
+  const [strategies, setStrategies] = useState(null);
   const [aiNote, setAiNote] = useState("");
 
   const resultRef = useRef(null);
@@ -25,7 +24,6 @@ export default function App() {
     budget_max: 5000000,
     priority_goal: 'High ROI',
     funding_source: '', 
-    preferred_countries: [],
   });
 
   // --- Typewriter Effect ---
@@ -52,16 +50,20 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, loopNum]);
 
-  const toggleCountry = (country) => {
-    setFormData(prev => {
-      const exists = prev.preferred_countries.includes(country);
-      return {
-        ...prev,
-        preferred_countries: exists 
-          ? prev.preferred_countries.filter(c => c !== country)
-          : [...prev.preferred_countries, country]
-      };
-    });
+  // --- GPA Input Validation ---
+  const handleGPAChange = (e) => {
+    let value = e.target.value;
+    // Prevent typing more than 4 characters
+    if (value.length > 4) {
+      value = value.slice(0, 4);
+    }
+    // Clamp to 0-10
+    let numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      numValue = Math.min(10, Math.max(0, numValue));
+      value = numValue.toString();
+    }
+    setFormData({...formData, gpa: value});
   };
 
   // --- REAL BACKEND CONNECTION ---
@@ -77,14 +79,13 @@ export default function App() {
         major: formData.major || "General",
         budget: formData.budget_max / 100000, 
         priority: formData.priority_goal,
-        funding_source: formData.funding_source,
-        countries: formData.preferred_countries
+        funding_source: formData.funding_source
       };
 
       const response = await axios.post('http://localhost:8000/api/recommend', payload);
 
       if (response.data.status === 'success') {
-         setApiResult(response.data.recommendations);
+         setStrategies(response.data.strategies);
          setAiNote(response.data.consultant_note);
          
          setIsLoading(false);
@@ -96,23 +97,6 @@ export default function App() {
       alert("Backend Offline! Make sure uvicorn is running.");
       setIsLoading(false);
     }
-  };
-
-  // --- SWAP LOGIC ---
-  const handleSwap = (selectedCountry) => {
-    // 1. Find the selected country object
-    const newTop = selectedCountry;
-    // 2. Filter it out of the current list
-    const others = apiResult.filter(c => c.country !== newTop.country);
-    // 3. Put selected at the top
-    const newOrder = [newTop, ...others];
-    
-    setApiResult(newOrder);
-    setAiNote(`(Swapped View) detailed AI analysis available for original recommendation.`);
-    setShowModal(false);
-    
-    // Scroll to top of card
-    resultRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -152,7 +136,7 @@ export default function App() {
             <span className={isDark ? 'text-[#e0e7ff]' : 'text-[#2c3e50]'}>{displayText}</span>
             <span className="inline-block w-1.5 h-10 md:h-20 bg-[#6b8e81] ml-3 animate-pulse align-middle"></span>
           </h1>
-          <p className="text-[10px] font-bold tracking-[0.4em] uppercase opacity-40 mb-2">Refined Academic Intelligence</p>
+          <p className="text-[10px] font-bold tracking-[0.4em] uppercase opacity-40 mb-2">Discovery Mode - We Find Countries For You</p>
         </header>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -170,13 +154,30 @@ export default function App() {
                       </select>
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">GPA Score</label>
-                      <input type="number" placeholder="9.0" className={`serif-input ${isDark ? 'text-white placeholder:text-white/20' : ''}`} value={formData.gpa} onChange={(e) => setFormData({...formData, gpa: e.target.value})} />
+                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">GPA Score (0-10)</label>
+                      <input 
+                        type="number" 
+                        placeholder="8.5" 
+                        min="0" 
+                        max="10" 
+                        step="0.1"
+                        className={`serif-input ${isDark ? 'text-white placeholder:text-white/20' : ''}`} 
+                        value={formData.gpa} 
+                        onChange={handleGPAChange}
+                      />
                     </div>
                   </div>
                   <div className="space-y-3 pt-8">
                     <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">Major / Field of Interest</label>
-                    <input type="text" placeholder="e.g. Computer Science" className={`serif-input w-full ${isDark ? 'text-white placeholder:text-white/20' : ''}`} value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})} />
+                    <select className={`serif-input ${isDark ? 'text-white' : ''}`} value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})}>
+                      <option value="" className="text-black">Select your field</option>
+                      <option value="Computer Science / IT" className="text-black">Computer Science / IT</option>
+                      <option value="Data Science & AI" className="text-black">Data Science & AI</option>
+                      <option value="Business / MBA" className="text-black">Business / MBA</option>
+                      <option value="Engineering (Non-IT)" className="text-black">Engineering (Non-IT)</option>
+                      <option value="Medicine / Health" className="text-black">Medicine / Health</option>
+                      <option value="Arts & Humanities" className="text-black">Arts & Humanities</option>
+                    </select>
                   </div>
                </FormSection>
 
@@ -212,98 +213,61 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="space-y-4 mb-10">
-                 <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 text-center">Preferred Countries</h5>
-                 <div className="flex flex-wrap gap-2 justify-center">
-                    {['USA', 'UK', 'Germany', 'Canada', 'Australia'].map(country => (
-                      <button key={country} type="button" onClick={() => toggleCountry(country)} className={`px-4 py-2 rounded-full border text-xs font-bold transition-all ${formData.preferred_countries.includes(country) ? 'bg-[#2c3e50] text-white border-[#2c3e50]' : 'bg-transparent border-slate-300 text-slate-500 hover:border-[#6b8e81]'}`}>
-                        {country}
-                      </button>
-                    ))}
-                 </div>
-              </div>
-
               <button type="submit" className="w-full py-7 bg-[#2c3e50] text-white rounded-[2.5rem] font-bold text-[10px] uppercase tracking-[0.4em] hover:bg-[#1a252f] transition-all flex items-center justify-center gap-3 shadow-lg">
-                {isLoading ? <Loader2 className="animate-spin" /> : <>Calculate Strategy <ArrowRight size={16}/></>}
+                {isLoading ? <Loader2 className="animate-spin" /> : <>Discover My Path <ArrowRight size={16}/></>}
               </button>
             </div>
           </div>
         </form>
 
-        {/* RESULTS */}
-        {showResult && apiResult && (
-          <div ref={resultRef} className="mt-24 w-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-10">
-            <div className="flex items-center gap-3 mb-8">
-              <BrainCircuit className="text-[#4f46e5] w-8 h-8" />
-              <h3 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-[#1e293b]'}`}>Your AI Recommended Pathway</h3>
+        {/* RESULTS - 3-COLUMN STRATEGIC DASHBOARD */}
+        {showResult && strategies && (
+          <div ref={resultRef} className="mt-24 w-full animate-in fade-in slide-in-from-bottom-10">
+            {/* EMPATHY HEADER */}
+            <div className={`mb-12 p-8 rounded-3xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-white border-slate-100 shadow-xl'}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <Smile size={24} className="text-[#6b8e81]" />
+                <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-[#1e293b]'}`}>Your Strategic Advisor</h3>
+              </div>
+              <p className={`text-lg leading-relaxed italic ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                "{aiNote || "Analyzing your profile..."}"
+              </p>
             </div>
 
-            <div className={`relative rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden ${isDark ? 'bg-[#1e293b] border-white/10' : 'bg-white border-slate-100'}`}>
-               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7]"></div>
+            <h2 className={`text-4xl font-serif italic mb-8 ${isDark ? 'text-white' : 'text-[#2c3e50]'}`}>
+              Your Strategic Pathways
+            </h2>
 
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 mt-2">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#eef2ff] text-[#4f46e5] text-[10px] font-black uppercase tracking-widest border border-[#e0e7ff]">
-                  <CheckCircle2 size={14} /> Top Recommendation
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-40">Match Score</div>
-                  <div className={`text-3xl font-serif italic ${apiResult[0].match_score > 80 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                    {apiResult[0].match_score}%
-                  </div>
-                </div>
-              </div>
+            {/* 3-COLUMN GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* SAFE BETS COLUMN */}
+              <StrategyColumn
+                title="SAFE BETS"
+                icon={Shield}
+                color="green"
+                countries={strategies.safe_bets}
+                isDark={isDark}
+              />
 
-              <h1 className={`text-6xl font-serif italic mb-6 ${isDark ? 'text-white' : 'text-[#2c3e50]'}`}>
-                {apiResult[0].country}
-              </h1>
+              {/* FAST TRACK COLUMN */}
+              <StrategyColumn
+                title="FAST TRACK"
+                icon={Zap}
+                color="yellow"
+                countries={strategies.fast_track}
+                isDark={isDark}
+              />
 
-              <div className={`p-6 rounded-2xl mb-10 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-[#fafcfb] border-slate-100'}`}>
-                 <div className="flex items-center gap-2 mb-3 text-[#6b8e81]">
-                    <Smile size={18}/>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategic Advice</span>
-                 </div>
-                 <p className={`text-lg leading-relaxed italic ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                   "{aiNote || "Calculating strategic roadmap..."}"
-                 </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-                <MetricCard icon={TrendingUp} label="Risk Profile" value={apiResult[0].match_score > 80 ? "Low Risk" : "Moderate Risk"} isDark={isDark} />
-                <MetricCard icon={Coins} label="Cost Estimate" value={apiResult[0].country === "Germany" ? "Tuition Free" : "Tuition + Living"} isDark={isDark} />
-                <MetricCard icon={Landmark} label="Visa Policy" value={apiResult[0].country === "Germany" ? "Opportunity Card" : "Standard"} isDark={isDark} />
-              </div>
-
-              <div className="space-y-4 mb-12 pl-2">
-                {apiResult[0].reasoning.map((reason, idx) => (
-                  <div key={idx} className="flex items-start gap-4">
-                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
-                       <CheckCircle2 size={16} className={reason.includes("❌") ? "text-red-400" : "text-[#6b8e81]"} />
-                     </div>
-                     <p className={`text-sm py-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{reason}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* COMPARE BUTTON */}
-              <button 
-                onClick={() => setShowModal(true)}
-                className={`w-full py-4 border rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-[0.98] ${isDark ? 'border-white/10 text-white hover:bg-white/5' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-              >
-                Compare Other Options
-              </button>
-
+              {/* MOONSHOTS COLUMN */}
+              <StrategyColumn
+                title="MOONSHOTS"
+                icon={AlertTriangle}
+                color="red"
+                countries={strategies.moonshots}
+                isDark={isDark}
+              />
             </div>
           </div>
-        )}
-
-        {/* COMPARISON MODAL */}
-        {showModal && apiResult && (
-          <ComparisonModal 
-            results={apiResult} 
-            onClose={() => setShowModal(false)} 
-            isDark={isDark} 
-            onSwap={handleSwap} // <--- Pass the swap function
-          />
         )}
       </main>
 
@@ -331,63 +295,116 @@ function FormSection({ title, color, children }) {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, isDark }) {
+function StrategyColumn({ title, icon: Icon, color, countries, isDark }) {
+  const colorClasses = {
+    green: {
+      bg: isDark ? 'bg-emerald-900/20' : 'bg-emerald-50',
+      border: isDark ? 'border-emerald-500/20' : 'border-emerald-200',
+      text: 'text-emerald-600',
+      icon: 'text-emerald-500'
+    },
+    yellow: {
+      bg: isDark ? 'bg-amber-900/20' : 'bg-amber-50',
+      border: isDark ? 'border-amber-500/20' : 'border-amber-200',
+      text: 'text-amber-600',
+      icon: 'text-amber-500'
+    },
+    red: {
+      bg: isDark ? 'bg-red-900/20' : 'bg-red-50',
+      border: isDark ? 'border-red-500/20' : 'border-red-200',
+      text: 'text-red-600',
+      icon: 'text-red-500'
+    }
+  };
+
+  const colors = colorClasses[color];
+
   return (
-    <div className={`p-6 rounded-2xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-[#f8fafc] border-slate-100'}`}>
-      <div className="flex items-center gap-2 mb-4 opacity-50">
-        <Icon size={16} />
-        <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    <div className={`rounded-3xl border p-6 ${colors.bg} ${colors.border}`}>
+      <div className="flex items-center gap-3 mb-6">
+        <Icon size={24} className={colors.icon} />
+        <h3 className={`text-xs font-black uppercase tracking-widest ${colors.text}`}>{title}</h3>
       </div>
-      <div className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-700'}`}>{value}</div>
+      
+      <div className="space-y-4">
+        {countries && countries.length > 0 ? (
+          countries.map((country, idx) => (
+            <CountryCard key={idx} country={country} isDark={isDark} />
+          ))
+        ) : (
+          <p className={`text-sm italic opacity-50 ${isDark ? 'text-white' : 'text-slate-600'}`}>
+            No countries match your criteria in this category.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-function ComparisonModal({ results, onClose, isDark, onSwap }) {
-  const alternatives = results.slice(1);
+function CountryCard({ country, isDark }) {
+  const prColors = {
+    green: 'bg-emerald-500',
+    yellow: 'bg-amber-500',
+    red: 'bg-red-500'
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
-      <div className={`relative w-full max-w-2xl rounded-[2.5rem] p-8 md:p-10 shadow-2xl animate-in zoom-in-95 duration-200 ${isDark ? 'bg-[#1e293b] border border-white/10 text-white' : 'bg-white text-slate-800'}`}>
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h3 className="text-2xl font-serif italic mb-1">Alternative Pathways</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Click a card to view full analysis</p>
+    <div className={`rounded-2xl border p-5 ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'} hover:scale-[1.02] transition-transform`}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-3xl">{country.flag}</span>
+        <div>
+          <h4 className={`text-lg font-serif italic ${isDark ? 'text-white' : 'text-[#2c3e50]'}`}>{country.country}</h4>
+          <p className={`text-[9px] uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{country.tagline}</p>
+        </div>
+      </div>
+
+      {/* Financial Status */}
+      <div className="mb-4">
+        {country.financial_gap === 0 ? (
+          <div className="flex items-center gap-2 text-emerald-600 text-sm font-bold">
+            <CheckCircle2 size={16} />
+            <span>Fully Covered</span>
           </div>
-          <button onClick={onClose} className={`p-2 rounded-full hover:bg-black/5 transition ${isDark ? 'hover:bg-white/10' : ''}`}>
-            <span className="text-xl font-bold">×</span>
-          </button>
-        </div>
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-          {alternatives.map((item, idx) => (
-            <div 
-              key={idx} 
-              onClick={() => onSwap(item)} // <--- CLICKABLE!
-              className={`p-6 rounded-2xl border flex items-center justify-between group cursor-pointer hover:scale-[1.01] transition-all ${isDark ? 'bg-white/5 border-white/5 hover:bg-white/10' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-sm ${item.match_score > 80 ? 'bg-emerald-100 text-emerald-600' : item.match_score > 50 ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
-                  {item.match_score}
-                </div>
-                <div>
-                  <h4 className="text-xl font-serif italic group-hover:underline decoration-[#6b8e81] underline-offset-4">{item.country}</h4>
-                  <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wide opacity-50 mt-1">
-                    <span>{item.match_score > 80 ? 'Low Risk' : item.match_score > 50 ? 'Moderate Risk' : 'High Risk'}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="hidden md:block text-right">
-                <div className="flex items-center gap-2 text-xs opacity-50 font-bold uppercase tracking-widest">
-                  View Analysis <ArrowRight size={12}/>
-                </div>
-              </div>
-            </div>
+        ) : country.financial_gap < 10 ? (
+          <div className="flex items-center gap-2 text-amber-600 text-sm font-bold">
+            <AlertTriangle size={16} />
+            <span>Gap: ₹{country.financial_gap}L (Manageable)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-red-600 text-sm font-bold">
+            <AlertTriangle size={16} />
+            <span>High Gap: ₹{country.financial_gap}L</span>
+          </div>
+        )}
+      </div>
+
+      {/* PR Timeline Bar */}
+      <div className="mb-3">
+        <p className={`text-[9px] font-bold uppercase tracking-wide mb-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>PR Timeline</p>
+        <div className="flex gap-1">
+          {country.timeline_steps.map((step, idx) => (
+            <div
+              key={idx}
+              className={`flex-1 h-2 rounded-full ${
+                idx === country.timeline_steps.length - 1
+                  ? prColors[country.pr_risk_color]
+                  : isDark ? 'bg-white/20' : 'bg-slate-200'
+              }`}
+              title={step}
+            ></div>
           ))}
-          {alternatives.length === 0 && <div className="text-center py-10 opacity-50 text-xs uppercase tracking-widest">No other countries matched your criteria.</div>}
         </div>
-        <div className="mt-8 text-center">
-          <button onClick={onClose} className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50 hover:opacity-100 transition">Close Comparison</button>
-        </div>
+        <p className={`text-[10px] mt-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          {country.timeline_steps[country.timeline_steps.length - 1]}
+        </p>
+      </div>
+
+      {/* Match Score */}
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200/50">
+        <span className={`text-[9px] font-bold uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Match</span>
+        <span className={`text-xl font-serif italic ${country.match_score > 80 ? 'text-emerald-500' : country.match_score > 60 ? 'text-amber-500' : 'text-red-500'}`}>
+          {country.match_score}%
+        </span>
       </div>
     </div>
   );
