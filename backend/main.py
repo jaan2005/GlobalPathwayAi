@@ -22,7 +22,6 @@ class UserRequest(BaseModel):
     budget: float
     priority: str
     funding_source: Optional[str] = "Self"
-    countries: List[str]
 
 @app.post("/api/recommend")
 async def recommend_pathway(user: UserRequest):
@@ -35,22 +34,45 @@ async def recommend_pathway(user: UserRequest):
         major_interest=user.major,
         budget_max_lakhs=user.budget,
         priority_goal=user.priority,
-        funding_source=user.funding_source,
-        preferred_countries=user.countries
+        funding_source=user.funding_source
     )
 
-    # 2. Run Logic Engine
-    results = core_engine.get_recommendations(user_profile)
+    # 2. Run Discovery Engine - Evaluate ALL countries
+    strategies = core_engine.discover_strategies(user_profile)
 
-    # 3. Run AI Advisor (Only for top result)
-    ai_note = ""
-    if results:
-        top_country = results[0]
-        country_db_data = core_engine.COUNTRY_DB.get(top_country['country'], {})
-        ai_note = ai_advisor.get_ai_advice(user_profile, top_country, country_db_data)
+    # 3. Empathy Engine - Context-aware advisor messages
+    budget = user.budget
+    if budget < 20:
+        empathy_note = f"We know {budget}L is tight. The USA is risky, but these 'Safe Bets' let you study debt-free."
+    elif budget <= 35:
+        empathy_note = f"You have good options. You can choose between 'Safety' (Germany) or 'Speed' (Ireland)."
+    else:
+        empathy_note = f"Strong budget! You can afford the 'Moonshot' (USA), but check the Visa Risk first."
+
+    # 4. Run AI Advisor for top result (if available)
+    ai_note = empathy_note
+    all_results = (strategies['safe_bets'] + strategies['fast_track'] + strategies['moonshots'])
+    
+    if all_results:
+        top_country = sorted(all_results, key=lambda x: -x['match_score'])[0]
+        # Get country data for AI advisor
+        country_db_data = None
+        for c in core_engine.COUNTRY_DB:
+            if c['name'] == top_country['country']:
+                country_db_data = c
+                break
+        
+        if country_db_data:
+            try:
+                ai_generated = ai_advisor.get_ai_advice(user_profile, top_country, country_db_data)
+                if ai_generated:
+                    ai_note = ai_generated
+            except Exception as e:
+                print(f"AI Advisor failed: {e}")
+                # Keep empathy note as fallback
 
     return {
         "status": "success",
-        "recommendations": results,
+        "strategies": strategies,
         "consultant_note": ai_note
     }
