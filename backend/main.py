@@ -3,7 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import core_engine
-import ai_advisor
+
+# Try to import ai_advisor, but don't fail if it's not available
+try:
+    import ai_advisor
+    AI_ADVISOR_AVAILABLE = True
+except:
+    AI_ADVISOR_AVAILABLE = False
+    print("⚠️  AI Advisor module not available. Using empathy engine only.")
 
 app = FastAPI()
 
@@ -53,7 +60,7 @@ async def recommend_pathway(user: UserRequest):
     ai_note = empathy_note
     all_results = (strategies['safe_bets'] + strategies['fast_track'] + strategies['moonshots'])
     
-    if all_results:
+    if all_results and AI_ADVISOR_AVAILABLE:
         top_country = sorted(all_results, key=lambda x: -x['match_score'])[0]
         # Get country data for AI advisor
         country_db_data = None
