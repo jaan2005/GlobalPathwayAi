@@ -1,394 +1,460 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Globe, Sun, Moon, UserCircle, Lightbulb, 
-  ArrowRight, Loader2,
-  BookOpen, GraduationCap, Pencil, Coffee, Home, LayoutDashboard, Info, AlertCircle,
-  BrainCircuit, TrendingUp, Coins, Landmark, CheckCircle2, Smile
+  Globe, Sun, Moon, ArrowRight, Loader2, 
+  ShieldCheck, Zap, AlertTriangle, Smile, TrendingUp, DollarSign,
+  Calendar, AlertCircle, CheckCircle, XCircle, ChevronDown, ChevronUp,
+  GitBranch, Clock, Award, Target, Lightbulb
 } from 'lucide-react';
 import axios from 'axios';
 
 export default function App() {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [showModal, setShowModal] = useState(false); 
-  
   const [apiResult, setApiResult] = useState(null);
   const [aiNote, setAiNote] = useState("");
-
+  const [riskNote, setRiskNote] = useState("");
+  const [meta, setMeta] = useState(null);
+  const [expandedCard, setExpandedCard] = useState(null);
   const resultRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    current_degree: '',
     gpa: '',
     major: '',
-    budget_max: 5000000,
+    budget_max: 2500000,
     priority_goal: 'High ROI',
-    funding_source: '', 
-    preferred_countries: [],
+    target_intake: 'Fall 2025'
   });
 
-  // --- Typewriter Effect ---
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [loopNum, setLoopNum] = useState(0);
-  const phrases = ["Your Dream.", "Our Concern."];
+  const phrases = ["Your Strategy.", "Your Future.", "Your Terms."];
   
   useEffect(() => {
     const i = loopNum % phrases.length;
     const fullText = phrases[i];
-    
     const timer = setTimeout(() => {
       setDisplayText(prev => isDeleting ? fullText.substring(0, prev.length - 1) : fullText.substring(0, prev.length + 1));
-      
-      if (!isDeleting && displayText === fullText) {
-        setTimeout(() => setIsDeleting(true), 2500);
-      } else if (isDeleting && displayText === "") {
-        setIsDeleting(false);
-        setLoopNum(loopNum + 1);
-      }
-    }, isDeleting ? 40 : 120);
-    
+      if (!isDeleting && displayText === fullText) setTimeout(() => setIsDeleting(true), 2000);
+      else if (isDeleting && displayText === "") { setIsDeleting(false); setLoopNum(loopNum + 1); }
+    }, isDeleting ? 30 : 100);
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, loopNum]);
 
-  const toggleCountry = (country) => {
-    setFormData(prev => {
-      const exists = prev.preferred_countries.includes(country);
-      return {
-        ...prev,
-        preferred_countries: exists 
-          ? prev.preferred_countries.filter(c => c !== country)
-          : [...prev.preferred_countries, country]
-      };
-    });
-  };
-
-  // --- REAL BACKEND CONNECTION ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Input Validation
+    if (!formData.major || formData.major === "") {
+      alert("Please select your field of study. This affects job-market demand and PR eligibility analysis.");
+      return;
+    }
+    
+    if (!formData.gpa || parseFloat(formData.gpa) <= 0) {
+      alert("Please enter a valid GPA between 0 and 10.");
+      return;
+    }
+
     setIsLoading(true);
     setShowResult(false);
 
     try {
       const payload = {
-        degree: formData.current_degree || "Bachelors",
+        degree: "Bachelors",
         gpa: parseFloat(formData.gpa) || 0,
-        major: formData.major || "General",
-        budget: formData.budget_max / 100000, 
+        major: formData.major,
+        budget: formData.budget_max / 100000,
         priority: formData.priority_goal,
-        funding_source: formData.funding_source,
-        countries: formData.preferred_countries
+        funding_source: "Self",
+        target_intake: formData.target_intake
       };
 
       const response = await axios.post('http://localhost:8000/api/recommend', payload);
 
       if (response.data.status === 'success') {
-         setApiResult(response.data.recommendations);
-         setAiNote(response.data.consultant_note);
-         
-         setIsLoading(false);
-         setShowResult(true);
-         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
+        setApiResult(response.data.strategies);
+        setAiNote(response.data.consultant_note);
+        setRiskNote(response.data.risk_advisory);
+        setMeta(response.data.meta);
+        setIsLoading(false);
+        setShowResult(true);
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
       }
     } catch (error) {
-      console.error("Connection Error:", error);
-      alert("Backend Offline! Make sure uvicorn is running.");
+      alert("Backend Offline! Run: uvicorn main:app --reload");
       setIsLoading(false);
     }
   };
 
-  // --- SWAP LOGIC ---
-  const handleSwap = (selectedCountry) => {
-    // 1. Find the selected country object
-    const newTop = selectedCountry;
-    // 2. Filter it out of the current list
-    const others = apiResult.filter(c => c.country !== newTop.country);
-    // 3. Put selected at the top
-    const newOrder = [newTop, ...others];
-    
-    setApiResult(newOrder);
-    setAiNote(`(Swapped View) detailed AI analysis available for original recommendation.`);
-    setShowModal(false);
-    
-    // Scroll to top of card
-    resultRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
-    <div className={`min-h-screen transition-all duration-1000 font-sans relative overflow-hidden ${isDark ? 'bg-[#0a0f1d] text-[#e0e7ff]' : 'bg-[#f4f7f5] text-[#334155]'}`}>
+    <div className={`min-h-screen transition-all duration-500 font-sans ${isDark ? 'bg-[#0a0f1d] text-[#e0e7ff]' : 'bg-[#f8fafc] text-[#1e293b]'}`}>
       
-      {/* BACKGROUND */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.07]">
-        <div className="absolute top-20 left-10 rotate-12"><GraduationCap size={120} /></div>
-        <div className="absolute top-1/2 left-[5%] -rotate-12"><BookOpen size={80} /></div>
-        <div className="absolute top-40 right-20 -rotate-12"><Globe size={140} /></div>
-      </div>
-
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className={`absolute top-0 left-0 w-full h-full opacity-50 transition-colors duration-1000 ${isDark ? 'bg-gradient-to-br from-[#0a0f1d] via-[#1e293b] to-[#0f172a]' : 'bg-gradient-to-br from-[#e8f0ed] via-[#f4f7f5] to-[#e0e7ff]'}`}></div>
-      </div>
-
-      {/* NAV */}
-      <nav className={`fixed top-0 w-full z-50 border-b backdrop-blur-xl transition-all ${isDark ? 'border-white/5 bg-black/40' : 'border-black/5 bg-white/60'}`}>
-        <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-tr from-[#6b8e81] to-[#5a7d9a] rounded-xl flex items-center justify-center shadow-lg">
-              <Globe className="w-5 h-5 text-white" />
+      {/* Nav */}
+      <nav className={`fixed top-0 w-full z-50 border-b backdrop-blur-xl ${isDark ? 'border-white/5 bg-[#0a0f1d]/80' : 'border-slate-200 bg-white/80'}`}>
+        <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-lg flex items-center justify-center">
+              <Globe className="w-4 h-4 text-white" />
             </div>
-            <span className="font-black text-lg tracking-tight">global pathway<span className="text-[#6b8e81]">.ai</span></span>
+            <span className="font-bold text-lg">GlobalPathways<span className="text-emerald-500">.ai</span></span>
           </div>
           <div className="flex items-center gap-4">
-             <button onClick={() => setIsDark(!isDark)} className="p-2 rounded-full hover:bg-black/5">
-                {isDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-[#2c3e50]" />}
-             </button>
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-50 hidden sm:block">Strategic Discovery Engine</span>
+            <button onClick={() => setIsDark(!isDark)} className="p-2 rounded-lg hover:bg-white/10">
+              {isDark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} />}
+            </button>
           </div>
         </div>
       </nav>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-8 pt-48 pb-32">
-        <header className="mb-20">
-          <h1 className="text-6xl md:text-8xl font-serif italic mb-2 leading-tight text-[#2c3e50] min-h-[1.2em]">
-            <span className={isDark ? 'text-[#e0e7ff]' : 'text-[#2c3e50]'}>{displayText}</span>
-            <span className="inline-block w-1.5 h-10 md:h-20 bg-[#6b8e81] ml-3 animate-pulse align-middle"></span>
+      <main className="max-w-7xl mx-auto px-6 pt-32 pb-20">
+        
+        {/* Hero */}
+        <header className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-6">
+            <Target size={12} /> Discovery Mode — We Find Paths You Didn't Know Existed
+          </div>
+          <h1 className="text-4xl md:text-6xl font-serif italic mb-4 min-h-[1.2em]">
+            {displayText}<span className="inline-block w-0.5 h-8 md:h-12 bg-emerald-500 ml-1 animate-pulse"></span>
           </h1>
-          <p className="text-[10px] font-bold tracking-[0.4em] uppercase opacity-40 mb-2">Refined Academic Intelligence</p>
+          <p className="text-sm opacity-60 max-w-xl mx-auto">
+            Enter your profile. We analyze every immigration pathway globally and show you the <span className="text-emerald-400 font-semibold">optimal routes to permanent residency</span> — ranked by success probability, not marketing hype.
+          </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* LEFT COLUMN */}
-          <div className={`lg:col-span-8 p-12 rounded-[3.5rem] border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-[#d1dbd6] shadow-xl shadow-emerald-100/20'}`}>
-            <div className="space-y-16">
-               <FormSection title="Academic Metrics" color="#6b8e81">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">Current Degree</label>
-                      <select className={`serif-input ${isDark ? 'text-white' : ''}`} value={formData.current_degree} onChange={(e) => setFormData({...formData, current_degree: e.target.value})}>
-                        <option value="" className="text-black">Choose Level</option>
-                        <option value="Bachelors" className="text-black">Bachelors</option>
-                        <option value="Masters" className="text-black">Masters</option>
-                      </select>
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">GPA Score</label>
-                      <input type="number" placeholder="9.0" className={`serif-input ${isDark ? 'text-white placeholder:text-white/20' : ''}`} value={formData.gpa} onChange={(e) => setFormData({...formData, gpa: e.target.value})} />
-                    </div>
-                  </div>
-                  <div className="space-y-3 pt-8">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#6b8e81]">Major / Field of Interest</label>
-                    <input type="text" placeholder="e.g. Computer Science" className={`serif-input w-full ${isDark ? 'text-white placeholder:text-white/20' : ''}`} value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})} />
-                  </div>
-               </FormSection>
-
-               <FormSection title="Wealth Strategy" color="#5a7d9a">
-                  <div className="space-y-8">
-                    <div className="flex justify-between items-end">
-                      <span className={`text-6xl font-serif italic ${isDark ? 'text-[#e0e7ff]' : 'text-[#2c3e50]'}`}>₹{(formData.budget_max / 100000).toFixed(0)}L</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest opacity-30">Total Endowment</span>
-                    </div>
-                    <input type="range" min="1000000" max="10000000" step="100000" value={formData.budget_max} onChange={(e) => setFormData({...formData, budget_max: Number(e.target.value)})} className="w-full h-1.5 rounded-full appearance-none bg-[#e2e8f0] accent-[#6b8e81] cursor-pointer" />
-                    
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 text-[#5a7d9a]">Primary Funding Source</label>
-                      <select className={`serif-input ${isDark ? 'text-white' : ''}`} value={formData.funding_source} onChange={(e) => setFormData({...formData, funding_source: e.target.value})}>
-                        <option value="" className="text-black">Select funding source</option>
-                        <option value="Self" className="text-black">Self / Family Funded</option>
-                        <option value="Education Loan" className="text-black">Education Loan</option>
-                      </select>
-                    </div>
-                  </div>
-               </FormSection>
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN */}
-          <div className="lg:col-span-4">
-            <div className={`p-10 rounded-[3.5rem] border sticky top-36 ${isDark ? 'bg-black/40 border-white/5' : 'bg-white shadow-xl border-[#d1dbd6]'}`}>
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] mb-10 text-center opacity-30">Directive</h4>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto mb-16">
+          <div className={`p-8 rounded-3xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-xl'}`}>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               
-              <div className="space-y-3 mb-10">
-                {['High ROI', 'Low Cost', 'Immigration'].map(goal => (
-                  <button key={goal} type="button" onClick={() => setFormData({...formData, priority_goal: goal})} className={`w-full text-left py-5 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.priority_goal === goal ? 'bg-[#6b8e81] text-white shadow-lg' : 'bg-slate-100 opacity-60 hover:opacity-100 text-slate-800'}`}>{goal}</button>
-                ))}
+              {/* GPA */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-50 block mb-2">GPA (0-10) <span className="text-red-400">*</span></label>
+                <input 
+                  type="number" placeholder="7.5" min="0" max="10" step="0.1"
+                  className={`w-full bg-transparent border-b-2 py-2 text-xl font-semibold outline-none transition-colors ${isDark ? 'border-white/20 focus:border-emerald-400' : 'border-slate-300 focus:border-emerald-500'}`}
+                  value={formData.gpa}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (parseFloat(val) > 10) val = "10";
+                    if (parseFloat(val) < 0) val = "0";
+                    setFormData({...formData, gpa: val});
+                  }}
+                />
+                <p className="text-[9px] opacity-40 mt-1">Used to filter academic eligibility</p>
               </div>
 
-              <div className="space-y-4 mb-10">
-                 <h5 className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 text-center">Preferred Countries</h5>
-                 <div className="flex flex-wrap gap-2 justify-center">
-                    {['USA', 'UK', 'Germany', 'Canada', 'Australia'].map(country => (
-                      <button key={country} type="button" onClick={() => toggleCountry(country)} className={`px-4 py-2 rounded-full border text-xs font-bold transition-all ${formData.preferred_countries.includes(country) ? 'bg-[#2c3e50] text-white border-[#2c3e50]' : 'bg-transparent border-slate-300 text-slate-500 hover:border-[#6b8e81]'}`}>
-                        {country}
-                      </button>
-                    ))}
-                 </div>
+              {/* Major */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-50 block mb-2">Field of Study <span className="text-red-400">*</span></label>
+                <select
+                  className={`w-full bg-transparent border-b-2 py-2 text-lg font-semibold outline-none cursor-pointer ${isDark ? 'border-white/20 focus:border-emerald-400' : 'border-slate-300 focus:border-emerald-500'}`}
+                  value={formData.major}
+                  onChange={(e) => setFormData({...formData, major: e.target.value})}
+                >
+                  <option value="">Select</option>
+                  <option value="Computer Science">Computer Science</option>
+                  <option value="Data Science">Data Science & AI</option>
+                  <option value="Business">Business / MBA</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Medicine">Healthcare</option>
+                  <option value="Arts">Arts & Design</option>
+                </select>
+                <p className="text-[9px] opacity-40 mt-1">Affects job-market demand & PR eligibility</p>
               </div>
 
-              <button type="submit" className="w-full py-7 bg-[#2c3e50] text-white rounded-[2.5rem] font-bold text-[10px] uppercase tracking-[0.4em] hover:bg-[#1a252f] transition-all flex items-center justify-center gap-3 shadow-lg">
-                {isLoading ? <Loader2 className="animate-spin" /> : <>Calculate Strategy <ArrowRight size={16}/></>}
-              </button>
+              {/* Budget */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-50 block mb-2">Total Budget</label>
+                <div className="text-xl font-bold text-emerald-400">₹{(formData.budget_max / 100000).toFixed(0)}L</div>
+                <input
+                  type="range" min="500000" max="10000000" step="100000"
+                  value={formData.budget_max}
+                  onChange={(e) => setFormData({...formData, budget_max: Number(e.target.value)})}
+                  className="w-full accent-emerald-500 mt-2"
+                />
+                <p className="text-[9px] opacity-40 mt-1">Tuition + living + visa + insurance</p>
+              </div>
+
+              {/* Intake */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-50 block mb-2">Target Intake</label>
+                <select
+                  className={`w-full bg-transparent border-b-2 py-2 text-lg font-semibold outline-none cursor-pointer ${isDark ? 'border-white/20 focus:border-emerald-400' : 'border-slate-300 focus:border-emerald-500'}`}
+                  value={formData.target_intake}
+                  onChange={(e) => setFormData({...formData, target_intake: e.target.value})}
+                >
+                  <option value="Fall 2025">Fall 2025</option>
+                  <option value="Spring 2026">Spring 2026</option>
+                  <option value="Fall 2026">Fall 2026</option>
+                </select>
+                <p className="text-[9px] opacity-40 mt-1">Personalizes your action timeline</p>
+              </div>
             </div>
+
+            {/* Submit Button */}
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className={`w-full py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 hover:scale-[1.01] active:scale-[0.99]'}`}
+            >
+              {isLoading ? <Loader2 className="animate-spin" size={18} /> : <>Analyze My Pathways <ArrowRight size={16} /></>}
+            </button>
+
+            {/* Reassurance */}
+            <p className="text-center text-[10px] opacity-40 mt-4">
+              No country preferences needed. We evaluate all viable immigration pathways for you.
+            </p>
           </div>
         </form>
 
-        {/* RESULTS */}
+        {/* Results */}
         {showResult && apiResult && (
-          <div ref={resultRef} className="mt-24 w-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-10">
-            <div className="flex items-center gap-3 mb-8">
-              <BrainCircuit className="text-[#4f46e5] w-8 h-8" />
-              <h3 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-[#1e293b]'}`}>Your AI Recommended Pathway</h3>
+          <div ref={resultRef} className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+            
+            {/* Stats Bar */}
+            {meta && (
+              <div className={`flex flex-wrap justify-center gap-4 mb-8 p-4 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
+                <StatBadge icon={<Target size={14} />} label="Paths Found" value={meta.total_options} color="emerald" />
+                <StatBadge icon={<ShieldCheck size={14} />} label="Safe Bets" value={meta.safe_count} color="green" />
+                <StatBadge icon={<Zap size={14} />} label="Fast Track" value={meta.fast_count} color="yellow" />
+                <StatBadge icon={<AlertTriangle size={14} />} label="Moonshots" value={meta.moonshot_count} color="red" />
+              </div>
+            )}
+
+            {/* AI Notes */}
+            <div className="max-w-3xl mx-auto space-y-4 mb-10">
+              <div className={`p-5 rounded-2xl border ${isDark ? 'bg-emerald-900/20 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                <div className="flex items-start gap-3">
+                  <Smile className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
+                  <p className="text-sm leading-relaxed">{aiNote}</p>
+                </div>
+              </div>
+              <div className={`p-4 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <p className="text-xs opacity-80">{riskNote}</p>
+              </div>
             </div>
 
-            <div className={`relative rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden ${isDark ? 'bg-[#1e293b] border-white/10' : 'bg-white border-slate-100'}`}>
-               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7]"></div>
-
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 mt-2">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#eef2ff] text-[#4f46e5] text-[10px] font-black uppercase tracking-widest border border-[#e0e7ff]">
-                  <CheckCircle2 size={14} /> Top Recommendation
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-40">Match Score</div>
-                  <div className={`text-3xl font-serif italic ${apiResult[0].match_score > 80 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                    {apiResult[0].match_score}%
-                  </div>
-                </div>
-              </div>
-
-              <h1 className={`text-6xl font-serif italic mb-6 ${isDark ? 'text-white' : 'text-[#2c3e50]'}`}>
-                {apiResult[0].country}
-              </h1>
-
-              <div className={`p-6 rounded-2xl mb-10 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-[#fafcfb] border-slate-100'}`}>
-                 <div className="flex items-center gap-2 mb-3 text-[#6b8e81]">
-                    <Smile size={18}/>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategic Advice</span>
-                 </div>
-                 <p className={`text-lg leading-relaxed italic ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                   "{aiNote || "Calculating strategic roadmap..."}"
-                 </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-                <MetricCard icon={TrendingUp} label="Risk Profile" value={apiResult[0].match_score > 80 ? "Low Risk" : "Moderate Risk"} isDark={isDark} />
-                <MetricCard icon={Coins} label="Cost Estimate" value={apiResult[0].country === "Germany" ? "Tuition Free" : "Tuition + Living"} isDark={isDark} />
-                <MetricCard icon={Landmark} label="Visa Policy" value={apiResult[0].country === "Germany" ? "Opportunity Card" : "Standard"} isDark={isDark} />
-              </div>
-
-              <div className="space-y-4 mb-12 pl-2">
-                {apiResult[0].reasoning.map((reason, idx) => (
-                  <div key={idx} className="flex items-start gap-4">
-                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
-                       <CheckCircle2 size={16} className={reason.includes("❌") ? "text-red-400" : "text-[#6b8e81]"} />
-                     </div>
-                     <p className={`text-sm py-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{reason}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* COMPARE BUTTON */}
-              <button 
-                onClick={() => setShowModal(true)}
-                className={`w-full py-4 border rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-[0.98] ${isDark ? 'border-white/10 text-white hover:bg-white/5' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-              >
-                Compare Other Options
-              </button>
-
+            {/* Strategy Columns */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <StrategyColumn 
+                title="Safe Bets" subtitle="70%+ PR Success Rate" 
+                icon={<ShieldCheck className="text-emerald-400" />}
+                items={apiResult.safe_bets} isDark={isDark} accent="emerald"
+                expandedCard={expandedCard} setExpandedCard={setExpandedCard}
+              />
+              <StrategyColumn 
+                title="Fast Track" subtitle="Optimized for Speed"
+                icon={<Zap className="text-yellow-400" />}
+                items={apiResult.fast_track} isDark={isDark} accent="yellow"
+                expandedCard={expandedCard} setExpandedCard={setExpandedCard}
+              />
+              <StrategyColumn 
+                title="Moonshots" subtitle="High Risk, High Reward"
+                icon={<AlertTriangle className="text-red-400" />}
+                items={apiResult.moonshots} isDark={isDark} accent="red"
+                expandedCard={expandedCard} setExpandedCard={setExpandedCard}
+              />
             </div>
           </div>
-        )}
-
-        {/* COMPARISON MODAL */}
-        {showModal && apiResult && (
-          <ComparisonModal 
-            results={apiResult} 
-            onClose={() => setShowModal(false)} 
-            isDark={isDark} 
-            onSwap={handleSwap} // <--- Pass the swap function
-          />
         )}
       </main>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        .serif-input {
-          width: 100%; background: transparent; border-bottom: 2px solid #e2e8f0;
-          padding: 1.2rem 0; font-family: serif; font-style: italic; font-size: 1.6rem;
-          outline: none; transition: 0.4s; color: inherit;
-        }
-        .serif-input:focus { border-color: #6b8e81; padding-left: 8px; }
-        option { font-family: sans-serif; font-style: normal; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-      `}} />
+      <footer className={`border-t py-8 text-center text-xs opacity-40 ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
+        <p>GlobalPathways.ai — Data-driven immigration intelligence. Built for informed decisions.</p>
+      </footer>
     </div>
   );
 }
 
-function FormSection({ title, color, children }) {
+function StatBadge({ icon, label, value, color }) {
+  const colors = { emerald: "text-emerald-400", green: "text-green-400", yellow: "text-yellow-400", red: "text-red-400" };
   return (
-    <div className="space-y-8">
-      <h2 className="text-[10px] font-black uppercase tracking-[0.5em] opacity-30" style={{ color }}>{title}</h2>
-      {children}
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5">
+      <span className={colors[color]}>{icon}</span>
+      <span className="text-xs opacity-70">{label}:</span>
+      <span className={`font-bold ${colors[color]}`}>{value}</span>
     </div>
   );
 }
 
-function MetricCard({ icon: Icon, label, value, isDark }) {
+function StrategyColumn({ title, subtitle, icon, items, isDark, accent, expandedCard, setExpandedCard }) {
+  const borderColors = { emerald: "border-emerald-500/20", yellow: "border-yellow-500/20", red: "border-red-500/20" };
+  
   return (
-    <div className={`p-6 rounded-2xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-[#f8fafc] border-slate-100'}`}>
-      <div className="flex items-center gap-2 mb-4 opacity-50">
-        <Icon size={16} />
-        <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
-      </div>
-      <div className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-700'}`}>{value}</div>
+    <div className={`p-5 rounded-3xl border ${borderColors[accent]} ${isDark ? 'bg-white/[0.02]' : 'bg-white shadow-sm'}`}>
+      <div className="flex items-center gap-2 mb-1">{icon}<h3 className="font-bold uppercase tracking-wider text-sm">{title}</h3></div>
+      <p className="text-[10px] uppercase tracking-wider opacity-40 mb-5 ml-7">{subtitle}</p>
+      
+      {items.length === 0 ? (
+        <div className="py-12 text-center opacity-30 text-xs uppercase tracking-wider">No matches for your profile</div>
+      ) : (
+        items.map((country, idx) => (
+          <CountryCard 
+            key={idx} 
+            country={country} 
+            isDark={isDark}
+            isExpanded={expandedCard === country.name}
+            onToggle={() => setExpandedCard(expandedCard === country.name ? null : country.name)}
+          />
+        ))
+      )}
     </div>
   );
 }
 
-function ComparisonModal({ results, onClose, isDark, onSwap }) {
-  const alternatives = results.slice(1);
+function CountryCard({ country, isDark, isExpanded, onToggle }) {
+  const healthColors = {
+    excellent: "text-emerald-400 bg-emerald-500/10",
+    manageable: "text-yellow-400 bg-yellow-500/10",
+    stretch: "text-red-400 bg-red-500/10"
+  };
+  
+  const prColors = {
+    green: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    yellow: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    red: "bg-red-500/20 text-red-400 border-red-500/30"
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
-      <div className={`relative w-full max-w-2xl rounded-[2.5rem] p-8 md:p-10 shadow-2xl animate-in zoom-in-95 duration-200 ${isDark ? 'bg-[#1e293b] border border-white/10 text-white' : 'bg-white text-slate-800'}`}>
-        <div className="flex justify-between items-center mb-8">
+    <div className={`rounded-2xl mb-3 border overflow-hidden transition-all ${isDark ? 'bg-[#0d1424] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+      
+      {/* Header */}
+      <div className="p-4 cursor-pointer" onClick={onToggle}>
+        <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="text-2xl font-serif italic mb-1">Alternative Pathways</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Click a card to view full analysis</p>
+            <h4 className="text-lg font-bold">{country.flag} {country.name}</h4>
+            <p className="text-[10px] uppercase tracking-wider opacity-50">{country.tagline}</p>
           </div>
-          <button onClick={onClose} className={`p-2 rounded-full hover:bg-black/5 transition ${isDark ? 'hover:bg-white/10' : ''}`}>
-            <span className="text-xl font-bold">×</span>
-          </button>
+          <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-lg ${healthColors[country.financial_health]}`}>
+            {country.financial_status}
+          </span>
         </div>
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-          {alternatives.map((item, idx) => (
-            <div 
-              key={idx} 
-              onClick={() => onSwap(item)} // <--- CLICKABLE!
-              className={`p-6 rounded-2xl border flex items-center justify-between group cursor-pointer hover:scale-[1.01] transition-all ${isDark ? 'bg-white/5 border-white/5 hover:bg-white/10' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-sm ${item.match_score > 80 ? 'bg-emerald-100 text-emerald-600' : item.match_score > 50 ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
-                  {item.match_score}
-                </div>
-                <div>
-                  <h4 className="text-xl font-serif italic group-hover:underline decoration-[#6b8e81] underline-offset-4">{item.country}</h4>
-                  <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wide opacity-50 mt-1">
-                    <span>{item.match_score > 80 ? 'Low Risk' : item.match_score > 50 ? 'Moderate Risk' : 'High Risk'}</span>
-                  </div>
-                </div>
+
+        {/* Quick Stats */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          <MiniStat icon={<TrendingUp size={10} />} label="ROI" value={`${country.roi_percentage}%`} />
+          <MiniStat icon={<Clock size={10} />} label="Break-even" value={`${country.break_even_months}mo`} />
+          <MiniStat icon={<Award size={10} />} label="PR Rate" value={`${country.pr_success_rate}%`} />
+        </div>
+
+        {/* PR Timeline */}
+        <div className="flex gap-1">
+          {country.timeline_steps.map((step, i) => {
+            const isLast = i === country.timeline_steps.length - 1;
+            return (
+              <div key={i} className={`flex-1 py-1.5 px-1 rounded text-[8px] font-bold uppercase text-center border ${isLast ? prColors[country.pr_risk_color] : (isDark ? 'bg-white/5 border-white/5' : 'bg-slate-200 border-slate-200')}`}>
+                {step}
               </div>
-              <div className="hidden md:block text-right">
-                <div className="flex items-center gap-2 text-xs opacity-50 font-bold uppercase tracking-widest">
-                  View Analysis <ArrowRight size={12}/>
-                </div>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-center mt-3">
+          <span className="text-[10px] opacity-50 flex items-center gap-1">
+            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {isExpanded ? 'Collapse' : 'Full Analysis'}
+          </span>
+        </div>
+      </div>
+
+      {/* Expanded */}
+      {isExpanded && (
+        <div className={`px-4 pb-4 space-y-4 border-t ${isDark ? 'border-white/5' : 'border-slate-200'} animate-in fade-in duration-200`}>
+          
+          {/* Costs */}
+          <div className="pt-4">
+            <h5 className="text-[10px] font-bold uppercase tracking-wider opacity-50 mb-2 flex items-center gap-1">
+              <DollarSign size={10} /> Cost Breakdown (₹ Lakhs)
+            </h5>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between"><span className="opacity-60">Tuition</span><span>₹{country.costs.tuition}L</span></div>
+              <div className="flex justify-between"><span className="opacity-60">Living (Total)</span><span>₹{country.costs.living}L</span></div>
+              <div className="flex justify-between"><span className="opacity-60">Visa Fees</span><span>₹{country.costs.visa_fees}L</span></div>
+              <div className="flex justify-between"><span className="opacity-60">Insurance</span><span>₹{country.costs.insurance}L</span></div>
+              <div className="flex justify-between col-span-2 pt-2 border-t border-dashed border-white/10 font-bold">
+                <span>Total Investment</span><span className="text-emerald-400">₹{country.total_cost}L</span>
               </div>
             </div>
-          ))}
-          {alternatives.length === 0 && <div className="text-center py-10 opacity-50 text-xs uppercase tracking-widest">No other countries matched your criteria.</div>}
+          </div>
+
+          {/* PR Branches */}
+          <div>
+            <h5 className="text-[10px] font-bold uppercase tracking-wider opacity-50 mb-2 flex items-center gap-1">
+              <GitBranch size={10} /> All PR Pathways From This Route
+            </h5>
+            <div className="space-y-2">
+              {country.pr_branches.map((branch, i) => (
+                <div key={i} className={`flex items-center justify-between p-2 rounded-lg text-xs ${isDark ? 'bg-white/5' : 'bg-white'}`}>
+                  <div>
+                    <span className="font-medium">{branch.path}</span>
+                    <span className="opacity-50 ml-2">({branch.timeline})</span>
+                  </div>
+                  <span className={`font-bold ${prColors[branch.color].split(' ')[1]}`}>{branch.success}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Policy Alerts */}
+          <div>
+            <h5 className="text-[10px] font-bold uppercase tracking-wider opacity-50 mb-2 flex items-center gap-1">
+              <AlertCircle size={10} /> Immigration Policy Updates
+            </h5>
+            <div className="space-y-1.5">
+              {country.policy_alerts.map((alert, i) => (
+                <div key={i} className={`flex items-start gap-2 text-[11px] p-2 rounded-lg ${
+                  alert.type === 'positive' ? (isDark ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700') :
+                  alert.type === 'negative' ? (isDark ? 'bg-red-500/10 text-red-300' : 'bg-red-50 text-red-700') :
+                  (isDark ? 'bg-white/5 opacity-70' : 'bg-slate-100')
+                }`}>
+                  {alert.type === 'positive' ? <CheckCircle size={12} className="shrink-0 mt-0.5" /> :
+                   alert.type === 'negative' ? <XCircle size={12} className="shrink-0 mt-0.5" /> :
+                   <AlertCircle size={12} className="shrink-0 mt-0.5" />}
+                  <span>{alert.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Timeline */}
+          {country.deadlines && country.deadlines.length > 0 && (
+            <div>
+              <h5 className="text-[10px] font-bold uppercase tracking-wider opacity-50 mb-2 flex items-center gap-1">
+                <Calendar size={10} /> Your Action Timeline
+              </h5>
+              <div className="space-y-1.5">
+                {country.deadlines.map((d, i) => (
+                  <div key={i} className={`flex items-center justify-between text-[11px] p-2 rounded-lg ${isDark ? 'bg-white/5' : 'bg-white'}`}>
+                    <span>{d.task}</span>
+                    <span className="font-bold text-cyan-400">{d.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Insider Insight */}
+          <div className={`p-3 rounded-xl border-l-2 border-emerald-500 ${isDark ? 'bg-emerald-900/10' : 'bg-emerald-50'}`}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1">
+              <Lightbulb size={10} /> Strategic Insight
+            </p>
+            <p className="text-xs opacity-80">{country.insider_insight}</p>
+          </div>
         </div>
-        <div className="mt-8 text-center">
-          <button onClick={onClose} className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50 hover:opacity-100 transition">Close Comparison</button>
-        </div>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, value }) {
+  return (
+    <div className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-white/5">
+      <span className="opacity-50">{icon}</span>
+      <span className="opacity-50">{label}:</span>
+      <span className="font-bold">{value}</span>
     </div>
   );
 }
